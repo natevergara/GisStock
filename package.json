@@ -1,0 +1,31 @@
+{
+  "name": "gisstock",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "typecheck": "tsc --noEmit",
+    "test": "npm run typecheck && npm run build",
+    "preview": "vite preview",
+    "deploy:gh": "vite build && gh-pages -d dist"
+  },
+  "dependencies": {
+    "papaparse": "^5.4.1",
+    "preact": "^10.22.0",
+    "zod": "^3.23.8",
+    "zustand": "^4.5.4"
+  },
+  "devDependencies": {
+    "@preact/preset-vite": "^2.9.0",
+    "@types/papaparse": "^5.3.14",
+    "autoprefixer": "^10.4.19",
+    "gh-pages": "^6.1.1",
+    "postcss": "^8.4.39",
+    "tailwindcss": "^3.4.6",
+    "typescript": "^5.4.5",
+    "vite": "^5.3.3",
+    "vite-plugin-pwa": "^0.20.0"
+  }
+}
