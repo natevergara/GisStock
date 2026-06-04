@@ -14,17 +14,13 @@ export function ExportButton() {
     0
   );
 
-  const editedParents = Object.values(dirtyByParent).filter(
-    (changedChildren) => changedChildren.size > 0
-  ).length;
-
   function handleExport() {
     if (!meta) return;
 
     setBusy(true);
 
     try {
-      // Solo reformateamos las filas editadas; el resto sale byte-idéntico al ERP.
+      // Solo reformateamos las filas editadas; el resto conserva su valor de Estoque original.
       const dirtyCodes = new Set<string>();
       for (const changed of Object.values(dirtyByParent)) {
         for (const code of changed) dirtyCodes.add(code);
@@ -50,9 +46,7 @@ export function ExportButton() {
 
       <span class="mt-0.5 block text-xs font-medium leading-tight text-white/70">
         {totalDirty > 0
-          ? `${totalDirty} variações alteradas em ${editedParents} produto${
-              editedParents === 1 ? '' : 's'
-            }`
+          ? `${totalDirty} variação${totalDirty === 1 ? '' : 'ões'} alterada${totalDirty === 1 ? '' : 's'}`
           : 'Sem alterações ainda'}
       </span>
     </button>

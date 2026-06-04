@@ -10,6 +10,7 @@ interface Props {
 }
 
 const SIZE_ORDER = ['PP', 'P', 'M', 'G', 'GG', 'XG', 'XGG', 'U', 'ÚNICO'];
+const EMPTY_DIRTY: ReadonlySet<string> = new Set();
 
 export function StockMatrix({ parentCode, childCodes }: Props) {
   const [openImage, setOpenImage] = useState<{ src: string; label: string } | null>(null);
@@ -21,7 +22,7 @@ export function StockMatrix({ parentCode, childCodes }: Props) {
   const dirtyByParent = useStockStore((s) => s.dirtyByParent);
   const updateChildStock = useStockStore((s) => s.updateChildStock);
 
-  const dirtySet = dirtyByParent[parentCode] ?? new Set<string>();
+  const dirtySet = dirtyByParent[parentCode] ?? EMPTY_DIRTY;
 
   const { colors, sizes } = useMemo(() => {
     const byColor = new Map<string, MatrixRow>();
@@ -68,9 +69,7 @@ export function StockMatrix({ parentCode, childCodes }: Props) {
   }, [childCodes, dirtySet, indexByCode, rows]);
 
   function updateCell(cell: MatrixCell, value: string) {
-    const parsedValue = parseInt(value, 10);
-    const safeValue = isFinite(parsedValue) && parsedValue >= 0 ? parsedValue : 0;
-    updateChildStock(parentCode, cell.childCode, String(safeValue));
+    updateChildStock(parentCode, cell.childCode, value);
   }
 
   useEffect(() => {
@@ -154,6 +153,7 @@ export function StockMatrix({ parentCode, childCodes }: Props) {
                           <StockInput
                             value={cell.stock}
                             isDirty={cell.isDirty}
+                            label={`${colorRow.color} tamanho ${size}`}
                             onInput={(value) => updateCell(cell, value)}
                           />
                         ) : (
@@ -189,6 +189,7 @@ export function StockMatrix({ parentCode, childCodes }: Props) {
           <img
             src={openImage.src}
             alt={openImage.label}
+            referrerpolicy="no-referrer"
             class="max-h-[90vh] max-w-[95vw] rounded-2xl object-contain"
             onClick={(e) => e.stopPropagation()}
           />
@@ -229,6 +230,7 @@ function ColorLabel({
             src={image}
             alt={color}
             loading="lazy"
+            referrerpolicy="no-referrer"
             class="h-full w-full object-contain p-1"
             onError={(e) => {
               (e.target as HTMLImageElement).style.display = 'none';
@@ -245,13 +247,14 @@ function ColorLabel({
   );
 }
 
-function StockInput({ value, isDirty, onInput }: { value: number; isDirty: boolean; onInput: (value: string) => void }) {
+function StockInput({ value, isDirty, label, onInput }: { value: number; isDirty: boolean; label: string; onInput: (value: string) => void }) {
   return (
     <input
       type="text"
       inputMode="numeric"
       pattern="[0-9]*"
       enterKeyHint="next"
+      aria-label={label}
       value={String(value)}
       onFocus={(e) => (e.target as HTMLInputElement).select()}
       onInput={(e) => onInput((e.target as HTMLInputElement).value)}

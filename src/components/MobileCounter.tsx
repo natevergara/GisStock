@@ -56,6 +56,7 @@ export function MobileCounter({ colors, sizes, onUpdateCell }: Props) {
           <img
             src={active.image}
             alt={active.color}
+            referrerpolicy="no-referrer"
             class="h-full w-full object-contain p-2"
             onError={(e) => {
               (e.target as HTMLImageElement).style.display = 'none';
@@ -91,6 +92,7 @@ export function MobileCounter({ colors, sizes, onUpdateCell }: Props) {
                 src={c.image}
                 alt={c.color}
                 loading="lazy"
+                referrerpolicy="no-referrer"
                 class="h-full w-full bg-surface object-contain p-0.5"
                 onError={(e) => {
                   (e.target as HTMLImageElement).style.visibility = 'hidden';
@@ -109,13 +111,14 @@ export function MobileCounter({ colors, sizes, onUpdateCell }: Props) {
       <div class="mt-4 grid grid-cols-2 gap-3">
         {sizes.map((size, sIdx) => {
           const cell = active.cells[size];
+          const firstCellIdx = sizes.findIndex((s) => active.cells[s]);
 
           return (
             <div key={size}>
               <p class="mb-1 text-center text-xs font-semibold text-txt2">{size}</p>
               {cell ? (
                 <input
-                  ref={sIdx === 0 ? firstInputRef : undefined}
+                  ref={sIdx === firstCellIdx ? firstInputRef : undefined}
                   type="text"
                   inputMode="numeric"
                   pattern="[0-9]*"
