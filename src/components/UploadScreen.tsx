@@ -61,14 +61,14 @@ export function UploadScreen() {
             <div class="flex flex-col gap-4">
               <img
                 src="icons/favicon.svg"
-                alt="GIsStock"
+                alt="GisStock"
                 width="64"
                 height="64"
                 class="h-16 w-16 rounded-2xl ring-1 ring-line"
               />
 
               <div>
-                <p class="text-sm font-semibold tracking-wide text-brand">GIsStock</p>
+                <p class="text-sm font-semibold tracking-wide text-brand">GisStock</p>
 
                 <h1 class="mt-1 text-3xl font-semibold leading-tight text-txt">
                   Controle visual de estoque

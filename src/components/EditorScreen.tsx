@@ -12,6 +12,10 @@ export function EditorScreen() {
   const reset = useStockStore((s) => s.reset);
   const persistActive = useStockStore((s) => s.persistActive);
 
+  const dirtyByParent = useStockStore((s) => s.dirtyByParent);
+  const dirtyCount = activeParentCode ? (dirtyByParent[activeParentCode]?.size ?? 0) : 0;
+
+  const [confirmBack, setConfirmBack] = useState(false);
   const [confirmZero, setConfirmZero] = useState(false);
   const resetParentStock = useStockStore((s) => s.resetParentStock);
 
@@ -48,8 +52,12 @@ export function EditorScreen() {
           <button
             type="button"
             onClick={() => {
-              persistActive();
-              reset();
+              if (dirtyCount > 0) {
+                setConfirmBack(true);
+              } else {
+                persistActive();
+                reset();
+              }
             }}
             class="-ml-2 flex min-h-touch min-w-touch items-center justify-center rounded-xl text-2xl text-txt2 hover:bg-surface"
             aria-label="Carregar outro inventário"
@@ -62,6 +70,7 @@ export function EditorScreen() {
               <img
                 src={parentImg}
                 alt={parentRow['Descrição'] ?? group.parentCode}
+                referrerpolicy="no-referrer"
                 class="h-full w-full object-contain p-1"
                 onError={(e) => {
                   (e.target as HTMLImageElement).style.display = 'none';
@@ -85,6 +94,35 @@ export function EditorScreen() {
           </div>
         </div>
       </header>
+
+      {confirmBack && (
+        <div
+          role="alert"
+          class="border-b border-danger/30 bg-danger/10 px-4 py-3"
+        >
+          <p class="mb-2 text-sm text-danger">
+            Há contagens não exportadas. Voltar vai descartá-las.
+          </p>
+          <div class="flex gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                reset();
+              }}
+              class="flex-1 rounded-2xl border-2 border-danger/40 bg-danger/10 py-2.5 text-sm font-semibold text-danger transition-transform active:scale-[0.98]"
+            >
+              Descartar e voltar
+            </button>
+            <button
+              type="button"
+              onClick={() => setConfirmBack(false)}
+              class="flex-1 rounded-2xl border-2 border-line bg-surface py-2.5 text-sm font-semibold text-txt2 transition-transform active:scale-[0.98]"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
 
       <main class="mx-auto w-full max-w-7xl flex-1 px-4 pt-4 pb-28 md:px-8 md:py-8">
         <StockMatrix parentCode={group.parentCode} childCodes={group.childCodes} />

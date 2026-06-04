@@ -3,7 +3,7 @@ import preact from '@preact/preset-vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
 // Base relativa para funcionar tanto en GitHub Pages con subruta
-// como en dominio propio (flowstock.nathanielvergara.com).
+// como en dominio propio (gisstock.nathanielvergara.com).
 export default defineConfig({
   base: './',
   plugins: [
@@ -12,8 +12,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['icons/favicon.svg', 'icons/apple-touch-icon.png'],
       manifest: {
-        name: 'GIsStock',
-        short_name: 'GIsStock',
+        name: 'GisStock',
+        short_name: 'GisStock',
         description: 'Contagem visual de estoque',
         theme_color: '#1C1C1E',
         background_color: '#1C1C1E',

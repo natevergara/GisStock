@@ -39,8 +39,9 @@ export function parseCsv(file: File): Promise<ParseResult> {
  * Export CSV compatible con Bling:
  * - Usa meta.fields para preservar columnas y orden
  * - Normaliza Estoque a formato "10,00" SOLO en las filas editadas (dirtyCodes).
- *   Las filas no tocadas quedan byte-idénticas al CSV original del ERP, evitando
- *   truncar/alterar valores que el usuario no modificó.
+ *   Las filas no tocadas conservan su valor de Estoque sin reformatear. Nota: con
+ *   quotes:true PapaParse re-encomilla todos los campos, así que los bytes no son
+ *   idénticos al original — pero los valores sí se preservan intactos.
  * - Mantiene BOM UTF-8 y CRLF
  *
  * Si dirtyCodes es undefined, normaliza todas las filas (comportamiento legacy).

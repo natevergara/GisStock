@@ -1,4 +1,4 @@
-# FlowStock
+# GisStock
 
 App web estática para **contagem visual de estoque** de produtos a partir de CSVs exportados do Bling ERP.
 
@@ -81,7 +81,7 @@ deploy-pages
 URL pública:
 
 ```txt
-https://flowstock.nathanielvergara.com
+https://gisstock.nathanielvergara.com
 ```
 
 ## Fluxo de uso
