@@ -17,7 +17,9 @@ export function EditorScreen() {
 
   const [confirmBack, setConfirmBack] = useState(false);
   const [confirmZero, setConfirmZero] = useState(false);
+  const [confirmDiscount, setConfirmDiscount] = useState(false);
   const resetParentStock = useStockStore((s) => s.resetParentStock);
+  const discountParentStock = useStockStore((s) => s.discountParentStock);
 
   useEffect(() => {
     return () => {
@@ -132,35 +134,89 @@ export function EditorScreen() {
         <div class="mx-auto flex w-full max-w-7xl justify-center md:justify-end">
           <div class="flex w-full flex-col gap-2 md:max-w-md">
             <ExportButton />
-            {confirmZero ? (
-              <div class="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    resetParentStock(group.parentCode);
-                    setConfirmZero(false);
-                  }}
-                  class="flex-1 rounded-2xl border-2 border-danger/40 bg-danger/10 py-2.5 text-sm font-semibold text-danger transition-transform active:scale-[0.98]"
-                >
-                  Confirmar zeragem
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setConfirmZero(false)}
-                  class="flex-1 rounded-2xl border-2 border-line bg-surface py-2.5 text-sm font-semibold text-txt2 transition-transform active:scale-[0.98]"
-                >
-                  Cancelar
-                </button>
+
+            <details
+              class="group"
+              onToggle={(e) => {
+                // Al cerrar el menú, descartamos cualquier confirmación pendiente.
+                if (!(e.currentTarget as HTMLDetailsElement).open) {
+                  setConfirmDiscount(false);
+                  setConfirmZero(false);
+                }
+              }}
+            >
+              <summary class="flex w-full cursor-pointer list-none items-center justify-center gap-1.5 rounded-2xl border border-line bg-surface py-2 text-sm font-medium text-txt2 transition-transform active:scale-[0.98]">
+                Mais ações
+                <span class="text-txt2 transition-transform group-open:rotate-180">⌄</span>
+              </summary>
+
+              <div class="mt-2 flex flex-col gap-2">
+                {confirmDiscount ? (
+                  <div class="flex flex-col gap-1.5">
+                    <p class="text-center text-xs text-txt2">
+                      Vai descontar 2 de cada variação com estoque ≥ 12. As demais ficam intactas.
+                    </p>
+                    <div class="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          discountParentStock(group.parentCode);
+                          setConfirmDiscount(false);
+                        }}
+                        class="flex-1 rounded-2xl border-2 border-accent/40 bg-accent/10 py-2.5 text-sm font-semibold text-accent transition-transform active:scale-[0.98]"
+                      >
+                        Confirmar −2
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setConfirmDiscount(false)}
+                        class="flex-1 rounded-2xl border-2 border-line bg-surface py-2.5 text-sm font-semibold text-txt2 transition-transform active:scale-[0.98]"
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setConfirmDiscount(true)}
+                    class="w-full rounded-2xl border border-line bg-surface py-2.5 text-sm font-medium text-txt transition-transform active:scale-[0.98]"
+                  >
+                    −2 nas variações ≥ 12
+                  </button>
+                )}
+
+                {confirmZero ? (
+                  <div class="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        resetParentStock(group.parentCode);
+                        setConfirmZero(false);
+                      }}
+                      class="flex-1 rounded-2xl border-2 border-danger/40 bg-danger/10 py-2.5 text-sm font-semibold text-danger transition-transform active:scale-[0.98]"
+                    >
+                      Confirmar zeragem
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setConfirmZero(false)}
+                      class="flex-1 rounded-2xl border-2 border-line bg-surface py-2.5 text-sm font-semibold text-txt2 transition-transform active:scale-[0.98]"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setConfirmZero(true)}
+                    class="w-full rounded-2xl border border-line bg-surface py-2.5 text-sm font-medium text-txt2 transition-transform active:scale-[0.98]"
+                  >
+                    Zerar tudo
+                  </button>
+                )}
               </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setConfirmZero(true)}
-                class="w-full rounded-2xl border border-line bg-surface py-2 text-sm font-medium text-txt2 transition-transform active:scale-[0.98]"
-              >
-                Zerar tudo
-              </button>
-            )}
+            </details>
           </div>
         </div>
       </footer>

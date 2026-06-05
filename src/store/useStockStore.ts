@@ -20,6 +20,7 @@ interface State {
   setSearch: (q: string) => void;
   updateChildStock: (parentCode: string, childCode: string, newValue: string) => void;
   resetParentStock: (parentCode: string) => void;
+  discountParentStock: (parentCode: string) => void;
   persistActive: () => void;
   rehydrateActive: () => void;
 }
@@ -122,6 +123,36 @@ export const useStockStore = create<State>((set, get) => ({
     schedulePersist(parentCode);
   },
 
+  discountParentStock: (parentCode) => {
+    const { rows, indexByCode, groups, dirtyByParent } = get();
+    const group = groups.find((g) => g.parentCode === parentCode);
+    if (!group) return;
+
+    const newRows = rows.slice();
+    const affected: string[] = [];
+
+    for (const childCode of group.childCodes) {
+      const idx = indexByCode.get(childCode);
+      if (idx === undefined) continue;
+
+      const current = parseStock(rows[idx]['Estoque']);
+      if (current >= 12) {
+        newRows[idx] = { ...newRows[idx], Estoque: String(current - 2) };
+        affected.push(childCode);
+      }
+    }
+
+    if (affected.length === 0) return;
+
+    const dirty = { ...dirtyByParent };
+    const set_ = new Set(dirty[parentCode] ?? []);
+    for (const code of affected) set_.add(code);
+    dirty[parentCode] = set_;
+
+    set({ rows: newRows, dirtyByParent: dirty });
+    schedulePersist(parentCode);
+  },
+
   persistActive: () => {
     const { activeParentCode } = get();
     if (!activeParentCode) return;
@@ -151,14 +182,15 @@ export const useStockStore = create<State>((set, get) => ({
   },
 }));
 
-function sanitizeStock(raw: string): string {
+function parseStock(raw: string | undefined): number {
   const trimmed = (raw ?? '').trim();
-  if (trimmed === '') return '0';
-
+  if (trimmed === '') return 0;
   const num = parseFloat(trimmed.replace(',', '.'));
-  if (!isFinite(num) || num < 0) return '0';
+  return !isFinite(num) || num < 0 ? 0 : Math.floor(num);
+}
 
-  return String(Math.floor(num));
+function sanitizeStock(raw: string): string {
+  return String(parseStock(raw));
 }
 
 function persistParent(parentCode: string) {
