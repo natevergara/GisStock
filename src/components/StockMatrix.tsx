@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { useStockStore } from '../store/useStockStore';
 import { firstImageUrl } from '../lib/grouping';
 import { parseDescricao } from '../lib/parseDescricao';
+import { parseStock, sortSizes } from '../lib/stock';
 import { MobileCounter, type MatrixCell, type MatrixRow } from './MobileCounter';
 
 interface Props {
@@ -9,7 +10,6 @@ interface Props {
   childCodes: string[];
 }
 
-const SIZE_ORDER = ['PP', 'P', 'M', 'G', 'GG', 'XG', 'XGG', 'U', 'ÚNICO'];
 const EMPTY_DIRTY: ReadonlySet<string> = new Set();
 
 export function StockMatrix({ parentCode, childCodes }: Props) {
@@ -267,20 +267,3 @@ function StockInput({ value, isDirty, label, onInput }: { value: number; isDirty
   );
 }
 
-function parseStock(value: string | undefined): number {
-  const parsed = Number(String(value ?? '0').replace(',', '.'));
-  return Number.isFinite(parsed) && parsed >= 0 ? Math.floor(parsed) : 0;
-}
-
-function sortSizes(sizes: string[]): string[] {
-  return [...sizes].sort((a, b) => {
-    const aIndex = SIZE_ORDER.indexOf(a.toUpperCase());
-    const bIndex = SIZE_ORDER.indexOf(b.toUpperCase());
-
-    if (aIndex !== -1 && bIndex !== -1) return aIndex - bIndex;
-    if (aIndex !== -1) return -1;
-    if (bIndex !== -1) return 1;
-
-    return a.localeCompare(b, 'pt-BR');
-  });
-}

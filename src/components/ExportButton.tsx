@@ -1,9 +1,11 @@
 import { useState } from 'preact/hooks';
 import { useStockStore } from '../store/useStockStore';
 import { buildExportFilename, downloadBlob, exportCsv } from '../lib/csv';
+import { buildStockSummary, type StockSummary } from '../lib/stock';
 
 const WORKER_URL = 'https://crimson-dream-a84d.natev.workers.dev';
 const USER_KEY = 'gisstock_usuario';
+const LABEL_MAX = 12;
 
 function getSavedUser(): string {
   return localStorage.getItem(USER_KEY) ?? '';
@@ -13,18 +15,77 @@ function saveUser(name: string): void {
   localStorage.setItem(USER_KEY, name.trim());
 }
 
-function notifyWorker(payload: {
-  usuario: string;
-  producto: string;
-  codigo: string;
-  variaciones: number;
-}): void {
+function notifyWorker(text: string): void {
   // fire-and-forget: no bloqueamos la exportación si el Worker falla
   fetch(WORKER_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
+    body: JSON.stringify({ text }),
   }).catch(() => {});
+}
+
+function escapeHtml(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function truncate(s: string, max: number): string {
+  return s.length > max ? `${s.slice(0, max - 1)}…` : s;
+}
+
+/** Tabla monoespaciada cor × talla, alineada por columnas. */
+function renderTable(summary: StockSummary): string {
+  const labels = summary.colors.map((c) => truncate(c.color, LABEL_MAX));
+  const labelW = labels.reduce((w, l) => Math.max(w, l.length), 0);
+
+  const cellText = (value: number | undefined) => (value === undefined ? '-' : String(value));
+  const colW = summary.sizes.map((sz) =>
+    summary.colors.reduce((w, c) => Math.max(w, cellText(c.cells[sz]).length), sz.length)
+  );
+
+  const header =
+    ''.padEnd(labelW) + summary.sizes.map((sz, i) => `  ${sz.padStart(colW[i])}`).join('');
+
+  const body = summary.colors.map((c, r) => {
+    const cells = summary.sizes
+      .map((sz, i) => `  ${cellText(c.cells[sz]).padStart(colW[i])}`)
+      .join('');
+    return labels[r].padEnd(labelW) + cells;
+  });
+
+  return [header, ...body].join('\n');
+}
+
+function buildMessage(opts: {
+  usuario: string;
+  codigo: string;
+  descricao: string;
+  summary: StockSummary;
+  counted: number;
+  totalVars: number;
+  otherProducts: number;
+}): string {
+  const hora = new Date().toLocaleString('pt-BR', {
+    timeZone: 'America/Sao_Paulo',
+    day: '2-digit',
+    month: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+
+  const lines = [
+    `📦 <b>GisStock — Exportação</b>`,
+    `👤 ${escapeHtml(opts.usuario)} · ${hora}`,
+    `📋 ${escapeHtml(opts.codigo)} — ${escapeHtml(truncate(opts.descricao, 40))}`,
+    `📦 ${opts.summary.total} un · ${opts.counted} de ${opts.totalVars} contadas`,
+    ``,
+    `<pre>${escapeHtml(renderTable(opts.summary))}</pre>`,
+  ];
+
+  if (opts.otherProducts > 0) {
+    lines.push(`⚠️ +${opts.otherProducts} outro(s) produto(s) também alterado(s)`);
+  }
+
+  return lines.join('\n');
 }
 
 export function ExportButton() {
@@ -36,6 +97,8 @@ export function ExportButton() {
   const meta = useStockStore((s) => s.meta);
   const dirtyByParent = useStockStore((s) => s.dirtyByParent);
   const groups = useStockStore((s) => s.groups);
+  const activeParentCode = useStockStore((s) => s.activeParentCode);
+  const indexByCode = useStockStore((s) => s.indexByCode);
 
   const totalDirty = Object.values(dirtyByParent).reduce(
     (acc, changedChildren) => acc + changedChildren.size,
@@ -57,24 +120,28 @@ export function ExportButton() {
       const blob = exportCsv(rows, meta, dirtyCodes);
       downloadBlob(blob, buildExportFilename());
 
-      // El aviso debe reflejar los productos realmente modificados, no el que
-      // esté abierto en pantalla (pueden no coincidir).
-      const dirtyParents = Object.entries(dirtyByParent)
-        .filter(([, children]) => children.size > 0)
-        .map(([code]) => code);
+      // El aviso muestra el estoque completo (por cor × talla) del producto
+      // abierto en pantalla, que es el que se acaba de trabajar.
+      const activeGroup = groups.find((g) => g.parentCode === activeParentCode);
+      if (activeGroup && activeParentCode) {
+        const summary = buildStockSummary(activeGroup.childCodes, rows, indexByCode);
+        const counted = dirtyByParent[activeParentCode]?.size ?? 0;
+        const otherProducts = Object.entries(dirtyByParent).filter(
+          ([code, set]) => code !== activeParentCode && set.size > 0
+        ).length;
 
-      let producto: string;
-      let codigo: string;
-      if (dirtyParents.length === 1) {
-        const g = groups.find((gr) => gr.parentCode === dirtyParents[0]);
-        producto = g?.parentRow?.['Descrição'] ?? dirtyParents[0];
-        codigo = dirtyParents[0];
-      } else {
-        producto = `${dirtyParents.length} productos`;
-        codigo = '';
+        notifyWorker(
+          buildMessage({
+            usuario,
+            codigo: activeParentCode,
+            descricao: activeGroup.parentRow['Descrição'] ?? '',
+            summary,
+            counted,
+            totalVars: activeGroup.childCodes.length,
+            otherProducts,
+          })
+        );
       }
-
-      notifyWorker({ usuario, producto, codigo, variaciones: totalDirty });
     } finally {
       setBusy(false);
     }

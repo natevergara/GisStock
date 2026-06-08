@@ -1,20 +1,18 @@
-// Cloudflare Worker — Avisos de GisStock a Telegram
+// Cloudflare Worker — Reenvía mensajes de GisStock a Telegram.
 //
-// Recibe un POST desde la app cuando alguien exporta stock y reenvía
-// un resumen a Telegram. El token del bot y el chat id viven aquí como
-// "secretos" (Variables de entorno), nunca en el código de la app.
+// La app arma el texto completo (formato HTML de Telegram) y este Worker solo
+// lo entrega, manteniendo el token del bot y el chat id como secretos
+// (Variables de entorno), nunca en el código de la app.
 
 export default {
   async fetch(request, env) {
     // CORS abierto: la app vive en otro dominio y necesita poder llamarnos.
-    // Riesgo bajo (solo se envían avisos, no hay datos sensibles).
     const cors = {
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Methods': 'POST, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type',
     };
 
-    // El navegador manda primero un "preflight" OPTIONS antes del POST real.
     if (request.method === 'OPTIONS') {
       return new Response(null, { status: 204, headers: cors });
     }
@@ -30,24 +28,11 @@ export default {
       return json({ error: 'JSON inválido' }, 400, cors);
     }
 
-    const usuario = sanitize(data.usuario) || 'Alguien';
-    const producto = sanitize(data.producto) || '—';
-    const codigo = sanitize(data.codigo) || '';
-    const variaciones = Number(data.variaciones) || 0;
-
-    const hora = new Date().toLocaleString('pt-BR', {
-      timeZone: 'America/Sao_Paulo',
-      dateStyle: 'short',
-      timeStyle: 'short',
-    });
-
-    const plural = variaciones === 1 ? '' : 'es';
-    const texto =
-      `📦 *GisStock — Exportación*\n\n` +
-      `👤 ${usuario}\n` +
-      `🏷️ ${producto}${codigo ? ` (${codigo})` : ''}\n` +
-      `🔢 ${variaciones} variación${plural} contada${plural === 'es' ? 's' : ''}\n` +
-      `🕒 ${hora}`;
+    // Telegram corta los mensajes a 4096 caracteres.
+    const text = String(data.text ?? '').slice(0, 4096);
+    if (!text.trim()) {
+      return json({ error: 'Mensaje vacío' }, 400, cors);
+    }
 
     const tgUrl = `https://api.telegram.org/bot${env.TELEGRAM_TOKEN}/sendMessage`;
     const tgRes = await fetch(tgUrl, {
@@ -55,8 +40,8 @@ export default {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         chat_id: env.TELEGRAM_CHAT_ID,
-        text: texto,
-        parse_mode: 'Markdown',
+        text,
+        parse_mode: 'HTML',
       }),
     });
 
@@ -67,15 +52,6 @@ export default {
     return json({ ok: true }, 200, cors);
   },
 };
-
-// Limpia el texto: evita saltos de línea y caracteres que rompen el formato
-// Markdown de Telegram, y corta a un largo razonable.
-function sanitize(value) {
-  return String(value ?? '')
-    .replace(/[\n\r*_`\[\]]/g, ' ')
-    .trim()
-    .slice(0, 80);
-}
 
 function json(obj, status, extraHeaders) {
   return new Response(JSON.stringify(obj), {

@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type { CsvMeta, CsvRow, ParentGroup } from '../types';
 import { buildGroups } from '../lib/grouping';
 import { clearAllSessions, loadSession, saveSession } from '../lib/storage';
+import { parseStock } from '../lib/stock';
 
 interface State {
   loaded: boolean;
@@ -181,13 +182,6 @@ export const useStockStore = create<State>((set, get) => ({
     set({ rows: newRows, dirtyByParent: dirty });
   },
 }));
-
-function parseStock(raw: string | undefined): number {
-  const trimmed = (raw ?? '').trim();
-  if (trimmed === '') return 0;
-  const num = parseFloat(trimmed.replace(',', '.'));
-  return !isFinite(num) || num < 0 ? 0 : Math.floor(num);
-}
 
 function sanitizeStock(raw: string): string {
   return String(parseStock(raw));
