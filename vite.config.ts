@@ -9,7 +9,10 @@ export default defineConfig({
   plugins: [
     preact(),
     VitePWA({
-      registerType: 'autoUpdate',
+      // 'prompt' (no 'autoUpdate'): un deploy NO recarga la página sola a mitad
+      // de un conteo. El service worker actualiza en background; la nueva versión
+      // se activa en la próxima apertura limpia.
+      registerType: 'prompt',
       includeAssets: ['icons/favicon.svg', 'icons/apple-touch-icon.png'],
       manifest: {
         name: 'GisStock',

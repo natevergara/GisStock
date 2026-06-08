@@ -2,6 +2,7 @@ import { useEffect, useState } from 'preact/hooks';
 import { useStockStore } from '../store/useStockStore';
 import { StockMatrix } from './StockMatrix';
 import { ExportButton } from './ExportButton';
+import { NotifyGroupButton } from './NotifyGroupButton';
 import { firstImageUrl } from '../lib/grouping';
 
 export function EditorScreen() {
@@ -151,6 +152,8 @@ export function EditorScreen() {
               </summary>
 
               <div class="mt-2 flex flex-col gap-2">
+                <NotifyGroupButton />
+
                 {confirmDiscount ? (
                   <div class="flex flex-col gap-1.5">
                     <p class="text-center text-xs text-txt2">

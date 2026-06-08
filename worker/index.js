@@ -34,12 +34,21 @@ export default {
       return json({ error: 'Mensaje vacío' }, 400, cors);
     }
 
+    // "private" → aviso personal (solo el dueño), "group" → grupo del equipo.
+    // Por defecto "group" para no romper clientes anteriores.
+    const target = data.target === 'private' ? 'private' : 'group';
+    const chatId = target === 'private' ? env.TELEGRAM_PRIVATE_CHAT_ID : env.TELEGRAM_GROUP_CHAT_ID;
+
+    if (!chatId) {
+      return json({ error: `Variable de entorno no configurada para target "${target}"` }, 500, cors);
+    }
+
     const tgUrl = `https://api.telegram.org/bot${env.TELEGRAM_TOKEN}/sendMessage`;
     const tgRes = await fetch(tgUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        chat_id: env.TELEGRAM_CHAT_ID,
+        chat_id: chatId,
         text,
         parse_mode: 'HTML',
       }),

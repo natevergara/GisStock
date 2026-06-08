@@ -1,7 +1,15 @@
 import { create } from 'zustand';
 import type { CsvMeta, CsvRow, ParentGroup } from '../types';
 import { buildGroups } from '../lib/grouping';
-import { clearAllSessions, loadSession, saveSession } from '../lib/storage';
+import {
+  clearAllSessions,
+  clearCsvData,
+  loadAllSessions,
+  loadCsvData,
+  loadSession,
+  saveCsvData,
+  saveSession,
+} from '../lib/storage';
 import { parseStock } from '../lib/stock';
 
 interface State {
@@ -24,6 +32,7 @@ interface State {
   discountParentStock: (parentCode: string) => void;
   persistActive: () => void;
   rehydrateActive: () => void;
+  restoreFromStorage: () => void;
 }
 
 export const useStockStore = create<State>((set, get) => ({
@@ -39,6 +48,7 @@ export const useStockStore = create<State>((set, get) => ({
 
   loadData: (rows, meta) => {
     clearAllSessions();
+    clearCsvData();
 
     const indexByCode = new Map<string, number>();
     rows.forEach((r, i) => {
@@ -48,6 +58,9 @@ export const useStockStore = create<State>((set, get) => ({
 
     const groups = buildGroups(rows);
     const firstParentCode = groups[0]?.parentCode ?? null;
+
+    // Persistimos el CSV recién cargado para sobrevivir refresh/cierre/update.
+    saveCsvData(rows, meta);
 
     set({
       loaded: true,
@@ -63,6 +76,7 @@ export const useStockStore = create<State>((set, get) => ({
 
   reset: () => {
     clearAllSessions();
+    clearCsvData();
 
     set({
       loaded: false,
@@ -181,7 +195,54 @@ export const useStockStore = create<State>((set, get) => ({
 
     set({ rows: newRows, dirtyByParent: dirty });
   },
+
+  restoreFromStorage: () => {
+    const stored = loadCsvData();
+    if (!stored) return;
+
+    const { rows, meta } = stored;
+
+    const indexByCode = new Map<string, number>();
+    rows.forEach((r, i) => {
+      const code = (r['Código'] ?? '').trim();
+      if (code) indexByCode.set(code, i);
+    });
+
+    const groups = buildGroups(rows);
+
+    // Aplicamos los overrides de TODAS las sesiones guardadas sobre el CSV base
+    // y reconstruimos los "dirty" para que el contador y el export sigan correctos.
+    const newRows = rows.slice();
+    const dirtyByParent: Record<string, Set<string>> = {};
+
+    for (const session of loadAllSessions()) {
+      for (const [childCode, value] of Object.entries(session.estoqueOverrides)) {
+        const idx = indexByCode.get(childCode);
+        if (idx === undefined) continue;
+        newRows[idx] = { ...newRows[idx], Estoque: value };
+      }
+      if (session.dirtyChildren.length > 0) {
+        dirtyByParent[session.parentCode] = new Set(session.dirtyChildren);
+      }
+    }
+
+    set({
+      loaded: true,
+      meta,
+      rows: newRows,
+      indexByCode,
+      groups,
+      activeParentCode: groups[0]?.parentCode ?? null,
+      search: '',
+      dirtyByParent,
+    });
+  },
 }));
+
+// Restauramos sincrónicamente el conteo en curso ANTES del primer render.
+// localStorage es síncrono, así que la app abre directo en el editor (sin
+// flash de la pantalla de subida) si había un CSV guardado.
+useStockStore.getState().restoreFromStorage();
 
 function sanitizeStock(raw: string): string {
   return String(parseStock(raw));
